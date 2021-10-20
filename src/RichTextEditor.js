@@ -1,5 +1,5 @@
 import { IconButton } from "@material-ui/core";
-import { useCallback, useMemo } from "react";
+import { useMemo } from "react";
 import {
   MdFormatBold,
   MdFormatItalic,
@@ -22,8 +22,6 @@ const LIST_TYPES = ["numbered-list", "bulleted-list"];
 
 export default function RichTextEditor({ value, setValue }) {
   const editor = useMemo(() => withReact(withHistory(createEditor())), []);
-  const renderElement = useCallback((props) => <Element {...props} />, []);
-  const renderLeaf = useCallback((props) => <Leaf {...props} />, []);
 
   return (
     <Slate editor={editor} value={value} onChange={setValue}>
@@ -37,30 +35,12 @@ export default function RichTextEditor({ value, setValue }) {
         <BlockButton format="numbered-list" icon={<MdFormatListNumbered />} />
         <BlockButton format="bulleted-list" icon={<MdFormatListBulleted />} />
       </div>
-      <Editable renderElement={renderElement} renderLeaf={renderLeaf} />
+      <Editable renderElement={Element} renderLeaf={Leaf} />
     </Slate>
   );
 }
 
-function MarkButton({ format, icon }) {
-  const editor = useSlate();
-  const isMarked = Editor.marks(editor)?.[format];
-  return (
-    <IconButton
-      size="small"
-      className={isMarked ? "text-dark" : "text-muted"}
-      onClick={() =>
-        isMarked
-          ? Editor.removeMark(editor, format)
-          : Editor.addMark(editor, format, true)
-      }
-    >
-      {icon}
-    </IconButton>
-  );
-}
-
-const toggleBlock = (editor, format) => {
+function toggleBlock(editor, format) {
   const isActive = isBlockActive(editor, format);
   const isList = LIST_TYPES.includes(format);
 
@@ -80,9 +60,9 @@ const toggleBlock = (editor, format) => {
     const block = { type: format, children: [] };
     Transforms.wrapNodes(editor, block);
   }
-};
+}
 
-const isBlockActive = (editor, format) => {
+function isBlockActive(editor, format) {
   if (!editor.selection) return false;
 
   const [match] = Editor.nodes(editor, {
@@ -92,9 +72,9 @@ const isBlockActive = (editor, format) => {
   });
 
   return !!match;
-};
+}
 
-const Element = ({ attributes, children, element }) => {
+function Element({ attributes, children, element }) {
   switch (element.type) {
     case "block-quote":
       return <blockquote {...attributes}>{children}</blockquote>;
@@ -119,9 +99,9 @@ const Element = ({ attributes, children, element }) => {
     default:
       return <p {...attributes}>{children}</p>;
   }
-};
+}
 
-const Leaf = ({ attributes, children, leaf }) => {
+function Leaf({ attributes, children, leaf }) {
   if (leaf.bold) {
     children = <strong>{children}</strong>;
   }
@@ -132,7 +112,25 @@ const Leaf = ({ attributes, children, leaf }) => {
     children = <u>{children}</u>;
   }
   return <span {...attributes}>{children}</span>;
-};
+}
+
+function MarkButton({ format, icon }) {
+  const editor = useSlate();
+  const isMarked = Editor.marks(editor)?.[format];
+  return (
+    <IconButton
+      size="small"
+      className={isMarked ? "text-dark" : "text-muted"}
+      onClick={() =>
+        isMarked
+          ? Editor.removeMark(editor, format)
+          : Editor.addMark(editor, format, true)
+      }
+    >
+      {icon}
+    </IconButton>
+  );
+}
 
 function BlockButton({ format, icon }) {
   const editor = useSlate();
