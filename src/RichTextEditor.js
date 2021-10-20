@@ -40,6 +40,7 @@ export default function RichTextEditor({ value, setValue }) {
       <div className="d-flex align-items-center">
         <IconButton
           size="small"
+          className="text-dark"
           disabled={!editor.history.undos.length}
           onClick={() => HistoryEditor.undo(editor)}
         >
@@ -47,6 +48,7 @@ export default function RichTextEditor({ value, setValue }) {
         </IconButton>
         <IconButton
           size="small"
+          className="text-dark"
           disabled={!editor.history.redos.length}
           onClick={() => HistoryEditor.redo(editor)}
         >
@@ -249,6 +251,7 @@ function RemoveLinkButton() {
   return (
     <IconButton
       size="small"
+      className="text-dark"
       disabled={!isLinkActive(editor)}
       onMouseDown={() => {
         if (isLinkActive(editor)) {
