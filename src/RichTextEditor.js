@@ -15,10 +15,10 @@ import {
   MdUndo,
 } from "react-icons/md";
 import {
-  Range,
   createEditor,
   Editor,
   Element as SlateElement,
+  Range,
   Transforms,
 } from "slate";
 import { HistoryEditor, withHistory } from "slate-history";
@@ -131,7 +131,7 @@ function Element({ attributes, children, element }) {
         <a
           {...attributes}
           href={element.url}
-          className={selected ? "border-1" : ""}
+          className={selected ? "bg-warning" : ""}
         >
           {children}
         </a>
