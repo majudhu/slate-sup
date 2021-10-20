@@ -7,25 +7,51 @@ import {
   MdFormatListNumbered,
   MdFormatQuote,
   MdFormatUnderlined,
+  MdLink,
+  MdLinkOff,
   MdLooksOne,
   MdLooksTwo,
+  MdRedo,
+  MdUndo,
 } from "react-icons/md";
 import {
+  Range,
   createEditor,
   Editor,
   Element as SlateElement,
   Transforms,
 } from "slate";
-import { withHistory } from "slate-history";
-import { Editable, Slate, useSlate, withReact } from "slate-react";
+import { HistoryEditor, withHistory } from "slate-history";
+import { Editable, Slate, useSelected, useSlate, withReact } from "slate-react";
 const LIST_TYPES = ["numbered-list", "bulleted-list"];
 
 export default function RichTextEditor({ value, setValue }) {
-  const editor = useMemo(() => withReact(withHistory(createEditor())), []);
+  const editor = useMemo(() => {
+    const editor = withReact(withHistory(createEditor()));
+    const { isInline } = editor;
+    editor.isInline = (element) => {
+      return element.type === "link" ? true : isInline(element);
+    };
+    return editor;
+  }, []);
 
   return (
     <Slate editor={editor} value={value} onChange={setValue}>
       <div className="d-flex align-items-center">
+        <IconButton
+          size="small"
+          disabled={!editor.history.undos.length}
+          onClick={() => HistoryEditor.undo(editor)}
+        >
+          <MdUndo />
+        </IconButton>
+        <IconButton
+          size="small"
+          disabled={!editor.history.redos.length}
+          onClick={() => HistoryEditor.redo(editor)}
+        >
+          <MdRedo />
+        </IconButton>
         <MarkButton format="bold" icon={<MdFormatBold />} />
         <MarkButton format="italic" icon={<MdFormatItalic />} />
         <MarkButton format="underline" icon={<MdFormatUnderlined />} />
@@ -34,6 +60,8 @@ export default function RichTextEditor({ value, setValue }) {
         <BlockButton format="block-quote" icon={<MdFormatQuote />} />
         <BlockButton format="numbered-list" icon={<MdFormatListNumbered />} />
         <BlockButton format="bulleted-list" icon={<MdFormatListBulleted />} />
+        <LinkButton />
+        <RemoveLinkButton />
       </div>
       <Editable renderElement={Element} renderLeaf={Leaf} />
     </Slate>
@@ -75,6 +103,8 @@ function isBlockActive(editor, format) {
 }
 
 function Element({ attributes, children, element }) {
+  const selected = useSelected();
+
   switch (element.type) {
     case "block-quote":
       return <blockquote {...attributes}>{children}</blockquote>;
@@ -95,6 +125,16 @@ function Element({ attributes, children, element }) {
         <ol className="list-decimal" {...attributes}>
           {children}
         </ol>
+      );
+    case "link":
+      return (
+        <a
+          {...attributes}
+          href={element.url}
+          className={selected ? "border-1" : ""}
+        >
+          {children}
+        </a>
       );
     default:
       return <p {...attributes}>{children}</p>;
@@ -138,12 +178,85 @@ function BlockButton({ format, icon }) {
     <IconButton
       size="small"
       className={isBlockActive(editor, format) ? "text-dark" : "text-muted"}
-      onClick={(event) => {
-        event.preventDefault();
-        toggleBlock(editor, format);
-      }}
+      onClick={() => toggleBlock(editor, format)}
     >
       {icon}
+    </IconButton>
+  );
+}
+
+function insertLink(editor, url) {
+  if (editor.selection) {
+    wrapLink(editor, url);
+  }
+}
+
+function isLinkActive(editor) {
+  const [link] = Editor.nodes(editor, {
+    match: (n) =>
+      !Editor.isEditor(n) && SlateElement.isElement(n) && n.type === "link",
+  });
+  return !!link;
+}
+
+function unwrapLink(editor) {
+  Transforms.unwrapNodes(editor, {
+    match: (n) =>
+      !Editor.isEditor(n) && SlateElement.isElement(n) && n.type === "link",
+  });
+}
+
+function wrapLink(editor, url) {
+  if (isLinkActive(editor)) {
+    unwrapLink(editor);
+  }
+
+  const { selection } = editor;
+  const isCollapsed = selection && Range.isCollapsed(selection);
+  const link = {
+    type: "link",
+    url,
+    children: isCollapsed ? [{ text: url }] : [],
+  };
+
+  if (isCollapsed) {
+    Transforms.insertNodes(editor, link);
+  } else {
+    Transforms.wrapNodes(editor, link, { split: true });
+    Transforms.collapse(editor, { edge: "end" });
+  }
+}
+
+function LinkButton() {
+  const editor = useSlate();
+  return (
+    <IconButton
+      size="small"
+      className={isLinkActive(editor) ? "text-dark" : "text-muted"}
+      onMouseDown={() => {
+        const url = window.prompt("Enter the URL of the link:");
+        if (!url) return;
+        insertLink(editor, url);
+      }}
+    >
+      <MdLink />
+    </IconButton>
+  );
+}
+
+function RemoveLinkButton() {
+  const editor = useSlate();
+  return (
+    <IconButton
+      size="small"
+      disabled={!isLinkActive(editor)}
+      onMouseDown={() => {
+        if (isLinkActive(editor)) {
+          unwrapLink(editor);
+        }
+      }}
+    >
+      <MdLinkOff />
     </IconButton>
   );
 }
