@@ -1,5 +1,5 @@
-import { IconButton } from "@material-ui/core";
-import { useMemo } from "react";
+import { Button, Dialog, IconButton, TextField } from "@material-ui/core";
+import { useMemo, useState } from "react";
 import {
   MdFormatBold,
   MdFormatItalic,
@@ -13,6 +13,7 @@ import {
   MdLooksTwo,
   MdRedo,
   MdUndo,
+  MdClose,
 } from "react-icons/md";
 import {
   createEditor,
@@ -231,18 +232,51 @@ function wrapLink(editor, url) {
 
 function LinkButton() {
   const editor = useSlate();
+  const [showDialog, setShowDialog] = useState(false);
+  const [text, setText] = useState("");
+
+  function submit(e) {
+    e.preventDefault();
+    setShowDialog(false);
+    setText("");
+    insertLink(editor, text);
+  }
+
   return (
-    <IconButton
-      size="small"
-      className={isLinkActive(editor) ? "text-dark" : "text-muted"}
-      onMouseDown={() => {
-        const url = window.prompt("Enter the URL of the link:");
-        if (!url) return;
-        insertLink(editor, url);
-      }}
-    >
-      <MdLink />
-    </IconButton>
+    <>
+      <IconButton
+        size="small"
+        className={isLinkActive(editor) ? "text-dark" : "text-muted"}
+        onClick={() => setShowDialog(true)}
+      >
+        <MdLink />
+      </IconButton>
+      <Dialog
+        fullWidth
+        maxWidth="sm"
+        open={showDialog}
+        onClose={() => setShowDialog(false)}
+      >
+        <h4 className="mx-3 mt-2 mb-0 d-flex align-items-center">Insert a link
+        <IconButton className="ms-auto" onClick={() => setShowDialog(false)}>
+          <MdClose />
+        </IconButton>
+        </h4>
+        <form onSubmit={submit} className="mx-3 mb-3">
+          <TextField
+            fullWidth
+            required
+            label="Enter URL"
+            className="mb-2"
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+          />
+          <Button variant="contained" color="primary" type="submit">
+            Insert link
+          </Button>
+        </form>
+      </Dialog>
+    </>
   );
 }
 
@@ -253,11 +287,7 @@ function RemoveLinkButton() {
       size="small"
       className="text-dark"
       disabled={!isLinkActive(editor)}
-      onMouseDown={() => {
-        if (isLinkActive(editor)) {
-          unwrapLink(editor);
-        }
-      }}
+      onClick={() => isLinkActive(editor) && unwrapLink(editor)}
     >
       <MdLinkOff />
     </IconButton>
