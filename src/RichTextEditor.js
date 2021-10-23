@@ -40,13 +40,11 @@ export default function RichTextEditor({ value, setValue }) {
 
     const { isInline, isVoid } = editor;
 
-    editor.isVoid = (element) => {
-      return element.type === "image" ? true : isVoid(element);
-    };
+    editor.isVoid = (element) =>
+      element.type === "image" ? true : isVoid(element);
 
-    editor.isInline = (element) => {
-      return element.type === "link" ? true : isInline(element);
-    };
+    editor.isInline = (element) =>
+      element.type === "link" ? true : isInline(element);
 
     return editor;
   }, []);
@@ -97,14 +95,12 @@ function toggleBlock(editor, format) {
       LIST_TYPES.includes(n.type),
     split: true,
   });
-  const newProperties = {
+  Transforms.setNodes(editor, {
     type: isActive ? "paragraph" : isList ? "list-item" : format,
-  };
-  Transforms.setNodes(editor, newProperties);
+  });
 
   if (!isActive && isList) {
-    const block = { type: format, children: [] };
-    Transforms.wrapNodes(editor, block);
+    Transforms.wrapNodes(editor, { type: format, children: [] });
   }
 }
 
@@ -122,7 +118,6 @@ function isBlockActive(editor, format) {
 
 function Element({ attributes, children, element }) {
   const selected = useSelected();
-  console.log({ attributes, children, element });
 
   switch (element.type) {
     case "block-quote":
