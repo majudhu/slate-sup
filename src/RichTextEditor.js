@@ -64,7 +64,6 @@ export default function RichTextEditor({ value, setValue }) {
         <BlockButton format="numbered-list" icon={<MdFormatListNumbered />} />
         <BlockButton format="bulleted-list" icon={<MdFormatListBulleted />} />
         <LinkButton />
-        <RemoveLinkButton />
       </div>
       <Editable renderElement={Element} renderLeaf={Leaf} />
     </Slate>
@@ -203,16 +202,16 @@ function isLinkActive(editor) {
 }
 
 function unwrapLink(editor) {
-  Transforms.unwrapNodes(editor, {
-    match: (n) =>
-      !Editor.isEditor(n) && SlateElement.isElement(n) && n.type === "link",
-  });
+  if (isLinkActive(editor)) {
+    Transforms.unwrapNodes(editor, {
+      match: (n) =>
+        !Editor.isEditor(n) && SlateElement.isElement(n) && n.type === "link",
+    });
+  }
 }
 
 function wrapLink(editor, url) {
-  if (isLinkActive(editor)) {
-    unwrapLink(editor);
-  }
+  unwrapLink(editor);
 
   const { selection } = editor;
   const isCollapsed = selection && Range.isCollapsed(selection);
@@ -246,10 +245,12 @@ function LinkButton() {
     <>
       <IconButton
         size="small"
-        className={isLinkActive(editor) ? "text-dark" : "text-muted"}
-        onClick={() => setShowDialog(true)}
+        className="text-dark"
+        onClick={() =>
+          isLinkActive(editor) ? unwrapLink(editor) : setShowDialog(true)
+        }
       >
-        <MdLink />
+        {isLinkActive(editor) ? <MdLinkOff /> : <MdLink />}
       </IconButton>
       <Dialog
         fullWidth
@@ -257,14 +258,16 @@ function LinkButton() {
         open={showDialog}
         onClose={() => setShowDialog(false)}
       >
-        <h4 className="mx-3 mt-2 mb-0 d-flex align-items-center">Insert a link
-        <IconButton className="ms-auto" onClick={() => setShowDialog(false)}>
-          <MdClose />
-        </IconButton>
+        <h4 className="mx-3 mt-2 mb-0 d-flex align-items-center">
+          Insert a link
+          <IconButton className="ms-auto" onClick={() => setShowDialog(false)}>
+            <MdClose />
+          </IconButton>
         </h4>
         <form onSubmit={submit} className="mx-3 mb-3">
           <TextField
             fullWidth
+            autoFocus
             required
             label="Enter URL"
             className="mb-2"
@@ -277,19 +280,5 @@ function LinkButton() {
         </form>
       </Dialog>
     </>
-  );
-}
-
-function RemoveLinkButton() {
-  const editor = useSlate();
-  return (
-    <IconButton
-      size="small"
-      className="text-dark"
-      disabled={!isLinkActive(editor)}
-      onClick={() => isLinkActive(editor) && unwrapLink(editor)}
-    >
-      <MdLinkOff />
-    </IconButton>
   );
 }
