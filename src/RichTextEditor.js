@@ -14,6 +14,7 @@ import {
   MdRedo,
   MdUndo,
   MdClose,
+  MdImage,
 } from "react-icons/md";
 import {
   createEditor,
@@ -23,16 +24,30 @@ import {
   Transforms,
 } from "slate";
 import { HistoryEditor, withHistory } from "slate-history";
-import { Editable, Slate, useSelected, useSlate, withReact } from "slate-react";
+import {
+  Editable,
+  Slate,
+  useSelected,
+  useSlate,
+  withReact,
+  useSlateStatic,
+} from "slate-react";
 const LIST_TYPES = ["numbered-list", "bulleted-list"];
 
 export default function RichTextEditor({ value, setValue }) {
   const editor = useMemo(() => {
     const editor = withReact(withHistory(createEditor()));
-    const { isInline } = editor;
+
+    const { isInline, isVoid } = editor;
+
+    editor.isVoid = (element) => {
+      return element.type === "image" ? true : isVoid(element);
+    };
+
     editor.isInline = (element) => {
       return element.type === "link" ? true : isInline(element);
     };
+
     return editor;
   }, []);
 
@@ -64,6 +79,7 @@ export default function RichTextEditor({ value, setValue }) {
         <BlockButton format="numbered-list" icon={<MdFormatListNumbered />} />
         <BlockButton format="bulleted-list" icon={<MdFormatListBulleted />} />
         <LinkButton />
+        <ImageButton />
       </div>
       <Editable renderElement={Element} renderLeaf={Leaf} />
     </Slate>
@@ -106,6 +122,7 @@ function isBlockActive(editor, format) {
 
 function Element({ attributes, children, element }) {
   const selected = useSelected();
+  console.log({ attributes, children, element });
 
   switch (element.type) {
     case "block-quote":
@@ -128,6 +145,7 @@ function Element({ attributes, children, element }) {
           {children}
         </ol>
       );
+
     case "link":
       return (
         <a
@@ -138,6 +156,19 @@ function Element({ attributes, children, element }) {
           {children}
         </a>
       );
+
+    case "image":
+      return (
+        <div {...attributes} className="w-100">
+          {children}
+          <img
+            contentEditable={false}
+            className="img-fluid w-100"
+            src={element.url}
+          />
+        </div>
+      );
+
     default:
       return <p {...attributes}>{children}</p>;
   }
@@ -187,12 +218,6 @@ function BlockButton({ format, icon }) {
   );
 }
 
-function insertLink(editor, url) {
-  if (editor.selection) {
-    wrapLink(editor, url);
-  }
-}
-
 function isLinkActive(editor) {
   const [link] = Editor.nodes(editor, {
     match: (n) =>
@@ -236,9 +261,9 @@ function LinkButton() {
 
   function submit(e) {
     e.preventDefault();
+    wrapLink(editor, text);
     setShowDialog(false);
     setText("");
-    insertLink(editor, text);
   }
 
   return (
@@ -276,6 +301,61 @@ function LinkButton() {
           />
           <Button variant="contained" color="primary" type="submit">
             Insert link
+          </Button>
+        </form>
+      </Dialog>
+    </>
+  );
+}
+function ImageButton() {
+  const editor = useSlateStatic();
+  const [showDialog, setShowDialog] = useState(false);
+  const [url, setUrl] = useState("");
+
+  function submit(e) {
+    e.preventDefault();
+    Transforms.insertNodes(editor, {
+      type: "image",
+      url,
+      children: [{ text: "" }],
+    });
+    setShowDialog(false);
+    setUrl("");
+  }
+
+  return (
+    <>
+      <IconButton
+        size="small"
+        className="text-dark"
+        onClick={() => setShowDialog(true)}
+      >
+        <MdImage />
+      </IconButton>
+      <Dialog
+        fullWidth
+        maxWidth="sm"
+        open={showDialog}
+        onClose={() => setShowDialog(false)}
+      >
+        <h4 className="mx-3 mt-2 mb-0 d-flex align-items-center">
+          Insert a image
+          <IconButton className="ms-auto" onClick={() => setShowDialog(false)}>
+            <MdClose />
+          </IconButton>
+        </h4>
+        <form onSubmit={submit} className="mx-3 mb-3">
+          <TextField
+            fullWidth
+            autoFocus
+            required
+            label="Enter URL"
+            className="mb-2"
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+          />
+          <Button variant="contained" color="primary" type="submit">
+            Insert image
           </Button>
         </form>
       </Dialog>
