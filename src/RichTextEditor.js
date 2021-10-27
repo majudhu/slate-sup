@@ -76,8 +76,28 @@ export default function RichTextEditor({ value, setValue }) {
         <BlockButton format="block-quote" icon={<MdFormatQuote />} />
         <BlockButton format="numbered-list" icon={<MdFormatListNumbered />} />
         <BlockButton format="bulleted-list" icon={<MdFormatListBulleted />} />
-        <LinkButton />
-        <ImageButton />
+
+        <InsertButton
+          icon={<MdLink />}
+          isActive={isLinkActive}
+          activeIcon={<MdLinkOff />}
+          title="Insert link"
+          inputLabel="Enter URL"
+          activeAction={unwrapLink}
+          onInsert={wrapLink}
+        />
+        <InsertButton
+          icon={<MdImage />}
+          title="Insert image"
+          inputLabel="Enter URL"
+          onInsert={(editor, url) =>
+            Transforms.insertNodes(editor, {
+              type: "image",
+              url,
+              children: [{ text: "" }],
+            })
+          }
+        />
       </div>
       <Editable renderElement={Element} renderLeaf={Leaf} />
     </Slate>
@@ -249,14 +269,22 @@ function wrapLink(editor, url) {
   }
 }
 
-function LinkButton() {
-  const editor = useSlate();
+function InsertButton({
+  title,
+  inputLabel,
+  icon,
+  isActive,
+  activeIcon,
+  activeAction,
+  onInsert,
+}) {
+  const editor = isActive ? useSlate() : useSlateStatic();
   const [showDialog, setShowDialog] = useState(false);
   const [text, setText] = useState("");
 
   function submit(e) {
     e.preventDefault();
-    wrapLink(editor, text);
+    onInsert(editor, text);
     setShowDialog(false);
     setText("");
   }
@@ -267,10 +295,12 @@ function LinkButton() {
         size="small"
         className="text-dark"
         onClick={() =>
-          isLinkActive(editor) ? unwrapLink(editor) : setShowDialog(true)
+          activeAction && isActive(editor)
+            ? activeAction(editor)
+            : setShowDialog(true)
         }
       >
-        {isLinkActive(editor) ? <MdLinkOff /> : <MdLink />}
+        {activeIcon && isActive(editor) ? activeIcon : icon}
       </IconButton>
       <Dialog
         fullWidth
@@ -279,7 +309,7 @@ function LinkButton() {
         onClose={() => setShowDialog(false)}
       >
         <h4 className="mx-3 mt-2 mb-0 d-flex align-items-center">
-          Insert a link
+          {title}
           <IconButton className="ms-auto" onClick={() => setShowDialog(false)}>
             <MdClose />
           </IconButton>
@@ -289,68 +319,13 @@ function LinkButton() {
             fullWidth
             autoFocus
             required
-            label="Enter URL"
+            label={inputLabel}
             className="mb-2"
             value={text}
             onChange={(e) => setText(e.target.value)}
           />
           <Button variant="contained" color="primary" type="submit">
-            Insert link
-          </Button>
-        </form>
-      </Dialog>
-    </>
-  );
-}
-function ImageButton() {
-  const editor = useSlateStatic();
-  const [showDialog, setShowDialog] = useState(false);
-  const [url, setUrl] = useState("");
-
-  function submit(e) {
-    e.preventDefault();
-    Transforms.insertNodes(editor, {
-      type: "image",
-      url,
-      children: [{ text: "" }],
-    });
-    setShowDialog(false);
-    setUrl("");
-  }
-
-  return (
-    <>
-      <IconButton
-        size="small"
-        className="text-dark"
-        onClick={() => setShowDialog(true)}
-      >
-        <MdImage />
-      </IconButton>
-      <Dialog
-        fullWidth
-        maxWidth="sm"
-        open={showDialog}
-        onClose={() => setShowDialog(false)}
-      >
-        <h4 className="mx-3 mt-2 mb-0 d-flex align-items-center">
-          Insert a image
-          <IconButton className="ms-auto" onClick={() => setShowDialog(false)}>
-            <MdClose />
-          </IconButton>
-        </h4>
-        <form onSubmit={submit} className="mx-3 mb-3">
-          <TextField
-            fullWidth
-            autoFocus
-            required
-            label="Enter URL"
-            className="mb-2"
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-          />
-          <Button variant="contained" color="primary" type="submit">
-            Insert image
+            {title}
           </Button>
         </form>
       </Dialog>
