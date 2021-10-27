@@ -1,20 +1,21 @@
 import { Button, Dialog, IconButton, TextField } from "@material-ui/core";
 import { useMemo, useState } from "react";
+import { FaTwitter } from "react-icons/fa";
 import {
+  MdClose,
   MdFormatBold,
   MdFormatItalic,
   MdFormatListBulleted,
   MdFormatListNumbered,
   MdFormatQuote,
   MdFormatUnderlined,
+  MdImage,
   MdLink,
   MdLinkOff,
   MdLooksOne,
   MdLooksTwo,
   MdRedo,
   MdUndo,
-  MdClose,
-  MdImage,
 } from "react-icons/md";
 import {
   createEditor,
@@ -29,9 +30,10 @@ import {
   Slate,
   useSelected,
   useSlate,
-  withReact,
   useSlateStatic,
+  withReact,
 } from "slate-react";
+import { Tweet } from "react-twitter-widgets";
 const LIST_TYPES = ["numbered-list", "bulleted-list"];
 
 export default function RichTextEditor({ value, setValue }) {
@@ -94,6 +96,18 @@ export default function RichTextEditor({ value, setValue }) {
             Transforms.insertNodes(editor, {
               type: "image",
               url,
+              children: [{ text: "" }],
+            })
+          }
+        />
+        <InsertButton
+          icon={<FaTwitter />}
+          title="Insert tweet"
+          inputLabel="Enter URL"
+          onInsert={(editor, id) =>
+            Transforms.insertNodes(editor, {
+              type: "tweet",
+              id,
               children: [{ text: "" }],
             })
           }
@@ -181,6 +195,14 @@ function Element({ attributes, children, element }) {
             className="img-fluid w-100"
             src={element.url}
           />
+        </div>
+      );
+
+    case "tweet":
+      return (
+        <div {...attributes} className="w-100">
+          {children}
+          <Tweet tweetId={element.id} />
         </div>
       );
 
@@ -280,12 +302,15 @@ function InsertButton({
 }) {
   const editor = isActive ? useSlate() : useSlateStatic();
   const [showDialog, setShowDialog] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [text, setText] = useState("");
 
-  function submit(e) {
+  async function submit(e) {
     e.preventDefault();
-    onInsert(editor, text);
+    setLoading(true);
+    await onInsert(editor, text);
     setShowDialog(false);
+    setLoading(false);
     setText("");
   }
 
@@ -310,7 +335,11 @@ function InsertButton({
       >
         <h4 className="mx-3 mt-2 mb-0 d-flex align-items-center">
           {title}
-          <IconButton className="ms-auto" onClick={() => setShowDialog(false)}>
+          <IconButton
+            disabled={loading}
+            className="ms-auto"
+            onClick={() => setShowDialog(false)}
+          >
             <MdClose />
           </IconButton>
         </h4>
@@ -319,12 +348,18 @@ function InsertButton({
             fullWidth
             autoFocus
             required
+            disabled={loading}
             label={inputLabel}
             className="mb-2"
             value={text}
             onChange={(e) => setText(e.target.value)}
           />
-          <Button variant="contained" color="primary" type="submit">
+          <Button
+            disabled={loading}
+            variant="contained"
+            color="primary"
+            type="submit"
+          >
             {title}
           </Button>
         </form>
