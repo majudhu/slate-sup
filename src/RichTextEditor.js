@@ -43,7 +43,7 @@ export default function RichTextEditor({ value, setValue }) {
     const { isInline, isVoid } = editor;
 
     editor.isVoid = (element) =>
-      element.type === "image" ? true : isVoid(element);
+      ["image", "tweet"].includes(element.type) ? true : isVoid(element);
 
     editor.isInline = (element) =>
       element.type === "link" ? true : isInline(element);
